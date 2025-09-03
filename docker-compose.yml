@@ -1,0 +1,43 @@
+version: '3.8'
+
+services:
+  invoice-processor:
+    build: .
+    ports:
+      - "8000:8000"
+    environment:
+      # Required environment variables
+      - GROQ_API_KEY=${GROQ_API_KEY}
+      
+      # Optional AWS settings (deprecated but kept for compatibility)
+      - AWS_ACCESS_KEY_ID=${AWS_ACCESS_KEY_ID:-}
+      - AWS_SECRET_ACCESS_KEY=${AWS_SECRET_ACCESS_KEY:-}
+      - AWS_REGION=${AWS_REGION:-us-east-1}
+      - S3_BUCKET_NAME=${S3_BUCKET_NAME:-}
+      
+      # Application settings
+      - DEBUG=${DEBUG:-false}
+      - LOG_LEVEL=${LOG_LEVEL:-INFO}
+      - HOST=0.0.0.0
+      - PORT=8000
+      
+      # LLM Configuration
+      - GROQ_MODEL_EXTRACTION=${GROQ_MODEL_EXTRACTION:-meta-llama/llama-4-scout-17b-16e-instruct}
+      - GROQ_MODEL_STANDARDIZATION=${GROQ_MODEL_STANDARDIZATION:-llama-3.1-8b-instant}
+      - LLM_TEMPERATURE=${LLM_TEMPERATURE:-0.0}
+      - MAX_RETRIES=${MAX_RETRIES:-3}
+      
+      # Image Processing
+      - PDF_ZOOM_FACTOR=${PDF_ZOOM_FACTOR:-2.0}
+      - IMAGE_QUALITY=${IMAGE_QUALITY:-85}
+      - IMAGE_FORMAT=${IMAGE_FORMAT:-JPEG}
+    volumes:
+      # Optional: Mount a volume for persistent data if needed
+      - ./uploads:/app/uploads
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "python", "-c", "import requests; requests.get('http://localhost:8000/health')"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 40s

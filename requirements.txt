@@ -1,0 +1,41 @@
+# FastAPI and Web Framework
+fastapi
+uvicorn[standard]
+python-multipart
+
+# Data Processing
+pandas
+numpy
+
+# Image Processing
+Pillow
+PyMuPDF
+
+# AWS Integration
+boto3
+botocore
+
+# LLM Integration
+langchain_groq
+langchain_core
+
+# Configuration and Environment
+python-dotenv
+pydantic
+pydantic-settings
+
+# HTTP Client (for health checks and external calls)
+httpx
+
+# Async Support
+anyio
+
+# JSON Processing (enhanced)
+orjson
+
+# Logging (enhanced)
+loguru
+
+# File Type Detection
+python-magic
+

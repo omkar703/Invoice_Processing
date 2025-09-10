@@ -4,6 +4,33 @@ from typing import List
 from app.core.logging import logger
 
 
+def format_price_with_currency(price: float, currency: str) -> str:
+    """
+    Format price with currency symbol.
+    
+    Args:
+        price: Numeric price value
+        currency: Currency symbol or code
+        
+    Returns:
+        Formatted price string with currency
+    """
+    if pd.isna(price) or price is None:
+        return None
+    
+    if pd.isna(currency) or currency is None or str(currency).strip() == '':
+        return str(price)  # Return just the price if no currency
+    
+    currency_str = str(currency).strip()
+    
+    # Handle common currency symbols that typically go before the number
+    if currency_str in ['$', '€', '£', '¥', '₹', 'USD', 'EUR', 'GBP', 'JPY', 'INR']:
+        return f"{currency_str}{price}"
+    else:
+        # For other currencies, put after the number
+        return f"{price}{currency_str}"
+
+
 def merge_dataframes_intelligently(standardized_dfs: List[pd.DataFrame]) -> pd.DataFrame:
     """
     Merge standardized DataFrames, handling different column sets intelligently.
@@ -107,7 +134,7 @@ def clean_dataframe(df: pd.DataFrame) -> pd.DataFrame:
             df[col] = pd.to_numeric(df[col], errors='coerce')
     
     # Clean string columns
-    string_columns = ['description', 'item_code', 'invoice_number', 'vendor_name', 'source_file', 'address', 'date_and_time', 'due_date', 'company_name']
+    string_columns = ['description', 'item_code', 'invoice_number', 'vendor_name', 'source_file', 'address', 'date_and_time', 'due_date', 'company_name', 'currency']
     for col in string_columns:
         if col in df.columns:
             # Strip whitespace and replace empty strings with None
@@ -120,3 +147,97 @@ def clean_dataframe(df: pd.DataFrame) -> pd.DataFrame:
         logger.info(f"Cleaned DataFrame: {original_rows} -> {cleaned_rows} rows")
     
     return df
+
+
+def reorder_and_rename_columns(df: pd.DataFrame) -> pd.DataFrame:
+    """
+    Reorder DataFrame columns according to the specified sequence and rename to proper titles:
+    Source File, Address, Description, Company Name, Invoice Number, Date, Due Date, 
+    Item Code, Quantity, Unit Price, Total Price, Page No.
+    Also format Unit Price and Total Price columns with currency symbols.
+    
+    Args:
+        df: DataFrame to reorder and rename
+        
+    Returns:
+        DataFrame with reordered and renamed columns, with prices formatted with currency
+    """
+    # Make a copy to avoid modifying the original DataFrame
+    df_copy = df.copy()
+    
+    # Format price columns with currency if currency column exists
+    if 'currency' in df_copy.columns and 'unit_price' in df_copy.columns:
+        df_copy['unit_price'] = df_copy.apply(
+            lambda row: format_price_with_currency(row['unit_price'], row['currency']), 
+            axis=1
+        )
+        logger.info("Formatted unit_price column with currency")
+    
+    if 'currency' in df_copy.columns and 'total_price' in df_copy.columns:
+        df_copy['total_price'] = df_copy.apply(
+            lambda row: format_price_with_currency(row['total_price'], row['currency']), 
+            axis=1
+        )
+        logger.info("Formatted total_price column with currency")
+    
+    # Remove the currency column as it's only used for formatting
+    if 'currency' in df_copy.columns:
+        df_copy = df_copy.drop('currency', axis=1)
+        logger.info("Removed currency column from final output")
+    
+    # Define the mapping from snake_case to proper column names
+    column_name_mapping = {
+        'source_file': 'Source File',
+        'address': 'Address',
+        'description': 'Description',
+        'company_name': 'Company Name',
+        'invoice_number': 'Invoice Number',
+        'date': 'Date',
+        'due_date': 'Due Date',
+        'item_code': 'Item Code',
+        'quantity': 'Quantity',
+        'unit_price': 'Unit Price',
+        'total_price': 'Total Price',
+        'page_no': 'Page No'
+    }
+    
+    # Define the desired column order (snake_case for internal processing)
+    desired_order = [
+        'source_file',
+        'address', 
+        'description',
+        'company_name',
+        'invoice_number',
+        'date',
+        'due_date',
+        'item_code',
+        'quantity',
+        'unit_price',
+        'total_price',
+        'page_no'
+    ]
+    
+    # Get available columns that match the desired order
+    available_columns = [col for col in desired_order if col in df_copy.columns]
+    
+    # Add any additional columns that are not in the desired order
+    additional_columns = [col for col in df_copy.columns if col not in desired_order]
+    
+    # Combine in the final order
+    final_order = available_columns + additional_columns
+    
+    # Reorder the DataFrame
+    df_reordered = df_copy[final_order]
+    
+    # Rename columns to proper titles
+    rename_dict = {}
+    for col in df_reordered.columns:
+        if col in column_name_mapping:
+            rename_dict[col] = column_name_mapping[col]
+        # Keep other columns as they are
+    
+    if rename_dict:
+        df_reordered = df_reordered.rename(columns=rename_dict)
+    
+    logger.info(f"Reordered and renamed columns to: {list(df_reordered.columns)}")
+    return df_reordered

@@ -7,7 +7,7 @@ from fastapi.responses import StreamingResponse
 from app.models.schemas import ErrorResponse
 from app.services.ocr_service import ocr_service
 from app.utils.image_processing import pdf_to_images, bytes_to_image, is_pdf_file
-from app.utils.data_processing import merge_dataframes_intelligently, clean_dataframe
+from app.utils.data_processing import merge_dataframes_intelligently, clean_dataframe, reorder_and_rename_columns
 from app.utils.file_validation import validate_uploaded_files, get_file_content_type, read_file_bytes
 from app.core.logging import logger
 
@@ -72,15 +72,16 @@ async def process_invoices(files: List[UploadFile] = File(..., description="Uplo
                         if line_items:
                             line_items_df = pd.DataFrame(line_items)
                             line_items_df['source_file'] = filename
-                            line_items_df['page_number'] = page_idx + 1
+                            line_items_df['page_no'] = page_idx + 1
                             
                             # Add invoice header information to each line item
                             invoice_details = extracted_data.get('invoice_details', {})
                             line_items_df['invoice_number'] = invoice_details.get('invoice_number')
                             line_items_df['address'] = invoice_details.get('vendor_address')
-                            line_items_df['date_and_time'] = invoice_details.get('invoice_date')
+                            line_items_df['date'] = invoice_details.get('invoice_date')
                             line_items_df['due_date'] = invoice_details.get('due_date')
                             line_items_df['company_name'] = invoice_details.get('vendor_name')
+                            line_items_df['currency'] = invoice_details.get('currency')
                             
                             # Clean the DataFrame
                             line_items_df = clean_dataframe(line_items_df)
@@ -127,6 +128,9 @@ async def process_invoices(files: List[UploadFile] = File(..., description="Uplo
                 status_code=status.HTTP_400_BAD_REQUEST,
                 detail="No valid data after processing and standardization."
             )
+        
+        # Reorder columns and rename to proper titles
+        final_df = reorder_and_rename_columns(final_df)
         
         # Generate CSV
         csv_buffer = io.StringIO()

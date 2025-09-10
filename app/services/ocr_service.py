@@ -67,6 +67,7 @@ Instructions:
 - Use null for missing fields
 - Convert numbers to numeric values (not strings)
 - Handle various column names intelligently
+- IMPORTANT: Detect and extract the currency symbol or code used in the invoice (e.g., $, €, £, USD, EUR, GBP, etc.)
 
 Required JSON format (respond with ONLY this JSON, nothing else):
 {
@@ -78,7 +79,8 @@ Required JSON format (respond with ONLY this JSON, nothing else):
     "due_date": "value or null",
     "total_amount": 0.00,
     "tax_amount": 0.00,
-    "subtotal": 0.00
+    "subtotal": 0.00,
+    "currency": "$ or € or £ or USD or EUR or other currency symbol/code or null"
   },
   "line_items": [
     {
@@ -226,8 +228,15 @@ Rules:
 - "Rate"/"Unit Price"/"Price" → "unit_price"
 - "Total"/"Amount"/"Line Total" → "total_price"
 - "Code"/"Item Code"/"SKU" → "item_code"
+- "Address"/"Vendor Address" → "address"
+- "Company"/"Vendor Name" → "company_name"
+- "Invoice Number"/"Invoice No" → "invoice_number"
+- "Date"/"Invoice Date" → "date"
+- "Due Date" → "due_date"
+- "Page"/"Page Number"/"Page No" → "page_no"
+- "Currency" → "currency"
 - Keep different concepts separate
-- Use only these standard names: description, quantity, unit_price, total_price, item_code, source_file, page_number
+- Use only these standard names: source_file, address, description, company_name, invoice_number, date, due_date, item_code, quantity, unit_price, total_price, page_no, currency
 
 Example format (respond with ONLY JSON like this):
 {{"Item": "description", "Qty": "quantity", "Rate": "unit_price", "Total": "total_price"}}
@@ -309,7 +318,6 @@ Example format (respond with ONLY JSON like this):
             'qty': 'quantity',
             'quantity': 'quantity',
             'units': 'quantity',
-            'amount': 'quantity',
             'rate': 'unit_price',
             'unit_price': 'unit_price',
             'price': 'unit_price',
@@ -323,7 +331,22 @@ Example format (respond with ONLY JSON like this):
             'code': 'item_code',
             'item_code': 'item_code',
             'product_code': 'item_code',
-            'sku': 'item_code'
+            'sku': 'item_code',
+            'address': 'address',
+            'vendor_address': 'address',
+            'company': 'company_name',
+            'vendor_name': 'company_name',
+            'company_name': 'company_name',
+            'invoice_number': 'invoice_number',
+            'invoice_no': 'invoice_number',
+            'date': 'date',
+            'invoice_date': 'date',
+            'date_and_time': 'date',
+            'due_date': 'due_date',
+            'page': 'page_no',
+            'page_number': 'page_no',
+            'page_no': 'page_no',
+            'currency': 'currency'
         }
         
         standardized_dfs = []
